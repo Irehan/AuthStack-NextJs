@@ -9,14 +9,17 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
+// The eslintConfig should directly be the array of configurations
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  // Add your custom rules as a separate configuration object within the array
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react/no-unescaped-entities": "off",
+    },
+  },
 ];
 
-export default {
-  ...eslintConfig,
-  rules: {
-    "@typescript-eslint/no-explicit-any": "off",
-    "react/no-unescaped-entities": "off"
-  }
-};
+// Export the array directly for the new flat config system
+export default eslintConfig;

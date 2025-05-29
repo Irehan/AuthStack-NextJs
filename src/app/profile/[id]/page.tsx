@@ -1,9 +1,9 @@
 // src\app\profile\[id]\page.tsx
 import Link from "next/link";
 
-export default async function UserProfile({ params }: { params: { id: string } }) {
-    // ✅ Dummy await to satisfy Next.js 15 async param handling
-    await Promise.resolve();
+export default async function UserProfile({ params }: { params: Promise<{ id: string }> }) {
+    // ✅ Properly await the params Promise
+    const { id } = await params;
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black px-4">
@@ -14,7 +14,7 @@ export default async function UserProfile({ params }: { params: { id: string } }
                 <div className="text-xl mb-6">
                     <span className="text-gray-400 mr-2">User ID:</span>
                     <span className="inline-block px-4 py-2 rounded-xl bg-orange-500 text-black font-mono break-all">
-                        {params.id}
+                        {id}
                     </span>
                 </div>
 
