@@ -3,19 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import User from "@/models/userModel";
 import { connect } from "@/dbConfig/dbConfig";
 
-// Define interface for response body
-interface UserResponse {
-    message: string;
-    data: object | null;
-}
-
-// Define interface for user data (based on typical User model structure)
+// Define interface for user data
 interface UserData {
     _id: string;
     username: string;
     email: string;
     isVerified: boolean;
-    // Add other relevant fields from your User model
+}
+
+// Define interface for response body
+interface UserResponse {
+    message: string;
+    data: UserData | null;
 }
 
 connect();
@@ -23,19 +22,29 @@ connect();
 export async function GET(request: NextRequest) {
     try {
         const userId = await getDataFromToken(request);
-        const user = await User.findOne({ _id: userId }).select("-password");
+        const user = await User.findOne({ _id: userId })
+            .select("_id username email isVerified");
+
         if (!user) {
-            return NextResponse.json<UserResponse>(
+            return NextResponse.json(
                 { message: "User not found", data: null },
                 { status: 404 }
             );
         }
+
+        // Manually convert to plain object with string _id
+        const userData: UserData = {
+            _id: user._id.toString(),
+            username: user.username,
+            email: user.email,
+            isVerified: user.isVerified
+        };
+
         return NextResponse.json<UserResponse>({
             message: "User Found",
-            data: user
+            data: userData
         });
     } catch (error: unknown) {
-        // Handle unknown error type safely
         const errorMessage = error instanceof Error ? error.message : "Server error";
         return NextResponse.json(
             { error: errorMessage },

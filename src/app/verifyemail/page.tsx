@@ -1,12 +1,17 @@
 "use client";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 // Define interface for API response
 interface VerifyEmailResponse {
     success: boolean;
     message?: string;
+    error?: string;
+}
+
+// Define interface for Axios error response
+interface AxiosErrorResponse {
     error?: string;
 }
 
@@ -16,7 +21,9 @@ export default function VerifyEmailPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
-    const verifyUserEmail = async () => {
+    const verifyUserEmail = useCallback(async () => {
+        if (!token) return; // Don't make API call if no token
+
         try {
             setLoading(true);
             setError(null);
@@ -31,15 +38,17 @@ export default function VerifyEmailPage() {
         } catch (error: unknown) {
             // Handle different types of errors
             const errorMessage =
-                error instanceof Error
-                    ? error.message
-                    : (error as any).response?.data?.error || "Verification error";
+                error instanceof AxiosError
+                    ? (error.response?.data as AxiosErrorResponse)?.error || error.message
+                    : error instanceof Error
+                        ? error.message
+                        : "Verification error";
             setError(errorMessage);
             console.error("Verification error:", errorMessage);
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]); // Only recreate when token changes
 
     useEffect(() => {
         // Extract token from URL query parameters
@@ -53,7 +62,7 @@ export default function VerifyEmailPage() {
             console.log("Token extracted from URL:", token);
             verifyUserEmail();
         }
-    }, [token]);
+    }, [token, verifyUserEmail]); // Now safe to include verifyUserEmail
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen py-2">

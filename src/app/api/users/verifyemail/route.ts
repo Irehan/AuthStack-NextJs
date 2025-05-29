@@ -1,7 +1,7 @@
 import { connect } from "@/dbConfig/dbConfig";
 import { NextRequest, NextResponse } from "next/server";
 import User from "@/models/userModel";
-import { Document, Types } from "mongoose";
+import { Document } from "mongoose";
 
 // Define interface for request body
 interface VerifyEmailRequestBody {
@@ -14,20 +14,14 @@ interface VerifyEmailResponse {
     success: boolean;
 }
 
-// Define interface for user data
-interface UserData {
+// Define minimal user document interface - remove the save method override
+interface UserDocument extends Document {
     email: string;
     isVerified: boolean;
     verifyToken?: string;
     verifyTokenExpiry?: Date;
-    username: string;
-    password: string;
-    forgotPasswordToken?: string;
-    forgotPasswordExpiry?: Date;
+    // Remove the save method - it's inherited from Document with correct typing
 }
-
-// Define Mongoose document type for User
-interface UserDocument extends UserData, Document { }
 
 connect();
 
@@ -37,10 +31,10 @@ export async function POST(request: NextRequest) {
         const { token } = reqBody;
         console.log("Verification token received:", token);
 
-        const user: UserDocument | null = await User.findOne({
+        const user = await User.findOne({
             verifyToken: token,
             verifyTokenExpiry: { $gt: Date.now() },
-        });
+        }) as UserDocument | null;
 
         if (!user) {
             console.error("Invalid or expired token:", token);
@@ -65,7 +59,6 @@ export async function POST(request: NextRequest) {
         });
 
     } catch (error: unknown) {
-        // Handle unknown error type safely
         const errorMessage = error instanceof Error ? error.message : "Server error during verification";
         console.error("Verification error:", error);
         return NextResponse.json(
