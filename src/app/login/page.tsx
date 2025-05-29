@@ -1,4 +1,3 @@
-// src\app\login\page.tsx
 "use client";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
@@ -6,18 +5,31 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import toast from "react-hot-toast";
 
+// Define interface for user state
+interface UserCredentials {
+    email: string;
+    password: string;
+}
+
+// Define interface for API response
+interface LoginResponse {
+    success: boolean;
+    message?: string;
+    error?: string;
+}
+
 export default function LoginPage() {
     const router = useRouter();
-    const [user, setUser] = useState({ email: "", password: "" });
-    const [buttonDisabled, setButtonDisabled] = useState(true);
-    const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState<UserCredentials>({ email: "", password: "" });
+    const [buttonDisabled, setButtonDisabled] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
     const onLogin = async () => {
         try {
             setError(null);
             setLoading(true);
-            const response = await axios.post("/api/users/login", user);
+            const response = await axios.post<LoginResponse>("/api/users/login", user);
 
             if (response.data.success) {
                 toast.success("Login successful");
@@ -26,11 +38,12 @@ export default function LoginPage() {
                 setError(response.data.error || "Login failed");
                 toast.error(response.data.error || "Login failed");
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Handle different types of errors
-            const errorMessage = error.response?.data?.error ||
-                error.message ||
-                "An unexpected error occurred";
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : (error as any).response?.data?.error || "An unexpected error occurred";
 
             setError(errorMessage);
             toast.error(errorMessage);

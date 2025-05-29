@@ -1,15 +1,26 @@
-// src\app\api\users\login\route.ts
 import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/userModel";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// Define interfaces for type safety
+interface LoginRequestBody {
+    email: string;
+    password: string;
+}
+
+interface TokenData {
+    id: string;
+    username: string;
+    email: string;
+}
+
 connect();
 
 export async function POST(request: NextRequest) {
     try {
-        const reqBody = await request.json();
+        const reqBody: LoginRequestBody = await request.json();
         const { email, password } = reqBody;
 
         // Check if user exists
@@ -42,8 +53,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Create token data
-        const tokenData = {
-            id: user._id,
+        const tokenData: TokenData = {
+            id: user._id.toString(),
             username: user.username,
             email: user.email
         };
@@ -67,9 +78,11 @@ export async function POST(request: NextRequest) {
 
         return response;
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        // Handle unknown error type safely
+        const errorMessage = error instanceof Error ? error.message : "Server error";
         return NextResponse.json(
-            { success: false, error: error.message || "Server error" },
+            { success: false, error: errorMessage },
             { status: 500 }
         );
     }

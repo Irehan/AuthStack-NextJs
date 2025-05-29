@@ -1,35 +1,79 @@
-// src\app\signup\page.tsx
 "use client";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import toast from "react-hot-toast";
+
+// Define interface for user state
+interface UserCredentials {
+    email: string;
+    password: string;
+    username: string;
+}
+
+// Define interface for API response
+interface SignupResponse {
+    success: boolean;
+    message: string;
+    user: {
+        id: string;
+        email: string;
+        username: string;
+    };
+    error?: string;
+}
+
+// Define interface for Axios error response
+interface AxiosErrorResponse {
+    error?: string;
+}
 
 export default function SignUpPage() {
     const router = useRouter();
-    const [user, setUser] = useState({ email: "", password: "", username: "" });
-    const [buttonDisabled, setButtonDisabled] = useState(true);
-    const [loading, setLoading] = useState(false);
+    const [user, setUser] = useState<UserCredentials>({ email: "", password: "", username: "" });
+    const [buttonDisabled, setButtonDisabled] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const validateForm = ({ email, password, username }: UserCredentials): boolean => {
+        const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        const isPasswordValid = password.length >= 6;
+        const isUsernameValid = username.length >= 3;
+        return isEmailValid && isPasswordValid && isUsernameValid;
+    };
 
     const onSignup = async () => {
         try {
             setLoading(true);
-            const response = await axios.post("/api/users/signup", user);
-            console.log("Signup Success", response.data);
-            toast.success("Signup successful!");
-            router.push("/login");
-        } catch (error: any) {
-            console.error("Signup Failed", error.message);
-            toast.error(error.message);
+            setError(null);
+            const response = await axios.post<SignupResponse>("/api/users/signup", user);
+
+            if (response.data.success) {
+                console.log("Signup Success", response.data);
+                toast.success("Signup successful! Please verify your email.");
+                router.push("/login");
+            } else {
+                setError(response.data.error || "Signup failed");
+                toast.error(response.data.error || "Signup failed");
+            }
+        } catch (error: unknown) {
+            const errorMessage =
+                error instanceof AxiosError
+                    ? (error.response?.data as AxiosErrorResponse)?.error || error.message
+                    : error instanceof Error
+                        ? error.message
+                        : "An unexpected error occurred";
+            console.error("Signup Failed:", errorMessage);
+            toast.error(errorMessage);
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        const { email, password, username } = user;
-        setButtonDisabled(!(email && password && username));
+        setButtonDisabled(!validateForm(user));
     }, [user]);
 
     return (
@@ -39,7 +83,13 @@ export default function SignUpPage() {
                     {loading ? "Processing..." : "Create an Account"}
                 </h2>
 
-                <form onSubmit={(e) => { e.preventDefault(); onSignup(); }}>
+                {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-red-900/30 border border-red-500 text-red-300">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={(e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); onSignup(); }}>
                     <div className="mb-4">
                         <label htmlFor="username" className="block text-white text-sm mb-1">Username</label>
                         <input
@@ -49,6 +99,7 @@ export default function SignUpPage() {
                             onChange={(e) => setUser({ ...user, username: e.target.value })}
                             placeholder="Enter your username"
                             className="w-full px-4 py-2 rounded-xl bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                            disabled={loading}
                         />
                     </div>
 
@@ -61,6 +112,7 @@ export default function SignUpPage() {
                             onChange={(e) => setUser({ ...user, email: e.target.value })}
                             placeholder="Enter your email"
                             className="w-full px-4 py-2 rounded-xl bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                            disabled={loading}
                         />
                     </div>
 
@@ -73,6 +125,8 @@ export default function SignUpPage() {
                             onChange={(e) => setUser({ ...user, password: e.target.value })}
                             placeholder="Create a password"
                             className="w-full px-4 py-2 rounded-xl bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                            disabled={loading}
+                            minLength={6}
                         />
                     </div>
 

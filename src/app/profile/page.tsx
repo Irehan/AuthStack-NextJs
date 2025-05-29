@@ -1,33 +1,80 @@
-// src\app\profile\page.tsx
 "use client";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+// Define interface for user data
+interface UserData {
+    _id: string;
+    username: string;
+    email: string;
+    isVerified: boolean;
+}
+
+// Define interface for logout API response
+interface LogoutResponse {
+    success: boolean;
+    message: string;
+    error?: string;
+}
+
+// Define interface for get user details API response
+interface UserDetailsResponse {
+    message: string;
+    data: UserData | null;
+    error?: string;
+}
+
+// Define interface for Axios error response
+interface AxiosErrorResponse {
+    error?: string;
+}
+
 export default function ProfilePage() {
     const router = useRouter();
-    const [data, setData] = useState("nothing");
+    const [data, setData] = useState<string>("nothing");
 
     const logout = async () => {
         try {
-            await axios.get("/api/users/logout");
-            toast.success("Logout successful");
-            router.push("/login");
-        } catch (error: any) {
-            console.error(error.message);
-            toast.error(error.message);
+            const response = await axios.get<LogoutResponse>("/api/users/logout");
+            if (response.data.success) {
+                toast.success("Logout successful");
+                router.push("/login");
+            } else {
+                toast.error(response.data.error || "Logout failed");
+            }
+        } catch (error: unknown) {
+            const errorMessage =
+                error instanceof AxiosError
+                    ? (error.response?.data as AxiosErrorResponse)?.error || error.message
+                    : error instanceof Error
+                        ? error.message
+                        : "An unexpected error occurred";
+            console.error("Logout Failed:", errorMessage);
+            toast.error(errorMessage);
         }
     };
 
     const getUserDetails = async () => {
         try {
-            const res = await axios.get("/api/users/me");
-            console.log(res.data);
-            setData(res.data.data._id);
-        } catch (error: any) {
-            toast.error("Failed to fetch user details");
+            const res = await axios.get<UserDetailsResponse>("/api/users/me");
+            if (res.data.data) {
+                console.log("User Details:", res.data);
+                setData(res.data.data._id);
+            } else {
+                toast.error(res.data.error || "No user data found");
+            }
+        } catch (error: unknown) {
+            const errorMessage =
+                error instanceof AxiosError
+                    ? (error.response?.data as AxiosErrorResponse)?.error || error.message
+                    : error instanceof Error
+                        ? error.message
+                        : "Failed to fetch user details";
+            console.error("Get User Details Failed:", errorMessage);
+            toast.error(errorMessage);
         }
     };
 

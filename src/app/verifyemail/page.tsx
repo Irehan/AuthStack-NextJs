@@ -1,20 +1,26 @@
-// src\app\verifyemail\page.tsx
-"use client"
+"use client";
 import axios from "axios";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+// Define interface for API response
+interface VerifyEmailResponse {
+    success: boolean;
+    message?: string;
+    error?: string;
+}
+
 export default function VerifyEmailPage() {
-    const [token, setToken] = useState("");
-    const [verified, setVerified] = useState(false);
+    const [token, setToken] = useState<string>("");
+    const [verified, setVerified] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState<boolean>(false);
 
     const verifyUserEmail = async () => {
         try {
             setLoading(true);
             setError(null);
-            const response = await axios.post('/api/users/verifyemail', { token });
+            const response = await axios.post<VerifyEmailResponse>('/api/users/verifyemail', { token });
 
             if (response.data.success) {
                 setVerified(true);
@@ -22,19 +28,21 @@ export default function VerifyEmailPage() {
             } else {
                 setError(response.data.error || "Verification failed");
             }
-        } catch (error: any) {
-            const errorMessage = error.response?.data?.error
-                || error.message
-                || "Verification error";
+        } catch (error: unknown) {
+            // Handle different types of errors
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : (error as any).response?.data?.error || "Verification error";
             setError(errorMessage);
             console.error("Verification error:", errorMessage);
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     useEffect(() => {
-        // FIXED: More robust token extraction
+        // Extract token from URL query parameters
         const urlParams = new URLSearchParams(window.location.search);
         const urlToken = urlParams.get("token");
         setToken(urlToken || "");
@@ -80,5 +88,5 @@ export default function VerifyEmailPage() {
                 </div>
             )}
         </div>
-    )
+    );
 }
